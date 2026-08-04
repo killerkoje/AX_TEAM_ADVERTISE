@@ -1,333 +1,234 @@
-# AX Hub — Creative Memory & Employee KB Design
+# AX Hub — Knowledge Base Design Spec
 
 **Date:** 2026-08-04  
-**Status:** Draft (aligned with (주)원정대 AX 채용 방향 + 사전 과제 케이스 분석)  
-**Scope:** 입사 전~초기 AX 프로토타입 기준 스펙. 완성 시스템 전체가 아님.
+**Status:** Draft  
+**Owner:** AX (입사 전 프로토타입 / 입사 후 Hub 기반)
 
 ---
 
-## 1. Context
+## 1. Purpose
 
-### 1.1 Company
+(주)원정대 AX팀 목표에 맞춰, 사내 업무에 흩어진 데이터·문서·기준·처리 이력을 AI가 쓸 수 있게 연결하는 **AX Hub**의 지식 기반(KB)을 설계한다.
 
-(주)원정대는 숏폼 커머스 콘텐츠·퍼포먼스 마케팅 중심 기업이다.
+핵심은 단순 챗봇이 아니라:
 
+1. **Employee KB** — 전사 직원이 쓰는 문서 지식 (매뉴얼, 기준, 러닝)
+2. **Creative Memory** — 광고 소재·성과·검수 맥락이 붙은 운영 지식
+
+둘을 같은 Hub 아래에서 분리해 쌓고, Hermes로 질의한다.
+
+---
+
+## 2. Company & AX Context
+
+### 원정대
+
+- 숏폼 커머스 콘텐츠를 만드는 퍼포먼스·콘텐츠 기업
 - 뷰티·리빙·가전·패션 등 브랜드 크리에이티브 기획·촬영
-- 성공 지표는 조회수가 아니라 **전환·매출**
-- 네이버·카카오 공식 파트너, 커머스 광고·숏폼 운영 규모가 빠르게 성장
+- 조회수가 아니라 **전환·매출**로 이어지는 콘텐츠가 성공 정의
 
-### 1.2 AX Team Goal
+### AX팀
 
-AX = AI Transformation. 목표는 자동화 도구 N개가 아니라:
-
-> 흩어진 **데이터 · 문서 · 기준 · 처리 이력**을 연결한 **사내 AI 통합시스템 (AX Hub)**
-
-채용 공고가 명시한 예시:
-
-- 광고 소재의 **반려 사유 + 성과**를 참고해 검수·생성 흐름 개선
-- 반복 보고/정리 자동화
-- 사내 데이터를 AI가 활용할 수 있는 구조로 정리
-- Knowledge Base / RAG / Knowledge Graph / AI Agent 실험
+- AI Transformation: 반복 업무·병목을 AI·시스템으로 전환
+- 최종 지향: **AX Hub** (데이터·문서·기준·처리 이력 연결)
+- 광고 운영, 보고, 콘텐츠 제작/검수, 소재 분석·생성 등에 AI 적용
 - 작은 프로토타입 → 현업 피드백 → 개선
+- KB / RAG / Agent 구조를 실험·문서화해 팀 자산으로 남김
 
-### 1.3 Case Signal (사전 과제)
-
-과제 `ax_pre_interview_case_exercise`는 제출용이 아니라, AX Hub 첫 도메인의 힌트다.
-
-실무자 요청 예:
-
-1. “올해 5~6월 가상브랜드A 관련, 다시 쓸 만한 소재”
-2. “가상브랜드C, 얼굴 비교 말고 사용 장면 위주”
-3. “성과 좋았던 소재 3개”
-4. “직장인 아침 루틴 느낌, 다른 상품에도 참고할 만한 것”
-
-관찰된 병목: 폴더/태그 검색 → 캠페인·심사·성과를 사람이 따로 합침 (중앙값 17분, 재확인·재전달 발생).
-
----
-
-## 2. Problem Statement
-
-과거 광고 소재·사내 지식을 찾을 때:
-
-- 소재 파일, 태그, 캠페인, 심사, 성과가 **분산**되어 있다
-- 태그가 비표준(`diet`/`다이어트`, 공백, `FINAL2`)이라 검색이 깨진다
-- “다시 쓸 만함” ≠ “성과 좋음” (매체별 반려·승인 이력이 재사용 가능성에 직결)
-- 성과 비교 시 **전환기준**(LPV vs purchase)·**데이터상태**(확정 vs 잠정)를 무시하면 오판한다
-- 회사 소개형 RAG만으로는 채용/과제에서 가리킨 병목을 풀지 못한다
+채용·팀 방향에서 강조된 예시: 광고 소재의 **반려 사유와 성과**를 참고한 검수·생성 개선, 사내 데이터의 AI 활용 구조화.
 
 ---
 
 ## 3. Goals & Non-Goals
 
-### 3.1 Goals
+### Goals
 
-1. **Creative Memory**: 소재 × 캠페인 × 심사 × 성과를 join한 재사용 후보 조회
-2. **Employee KB**: 사내 매뉴얼·기준·러닝 문서를 Obsidian에 두고 RAG로 질의
-3. 현업이 Hermes로 자연어 질의할 수 있는 최소 Agent 툴셋
-4. 스키마·태그 사전·사실/추론 분리 규칙을 팀 자산으로 문서화
+- 전사 문서 KB를 Obsidian에 쌓고, LlamaIndex + pgvector로 검색·질의
+- 광고 소재 관련 정형 지식(소재·캠페인·심사·성과·러닝)을 Postgres에 구조화
+- Hermes를 직원 접점 UX/Agent로 사용
+- 문서 변경량이 크지 않으므로 **증분 upsert** 인덱싱
+- 사실 / 추론 / 가설을 섞지 않는 저장 규칙
 
-### 3.2 Non-Goals (초기)
+### Non-Goals (초기)
 
-- DeepTutor 등 교육용 제품 통째 fork/도입
-- 전체 매체 API 실시간 연동
-- Knowledge Graph 풀 구축
-- 완벽한 멀티 Agent / 자동 소재 생성 파이프라인
-- 월 300소재 스케일 인프라 최적화
-- 회사 소개·복지 중심 RAG를 코어로 삼는 것
+- DeepTutor 등 교육용 제품 통째 도입 (RAG 엔진 아이디어만 참고 가능)
+- LangChain 구형 Chain 스택
+- 전용 벡터DB(Qdrant 등)를 처음부터 도입
+- 전체 매체 API 실시간 연동, KG 풀구축, 대규모 인프라
 
 ---
 
-## 4. Architecture Overview
-
-AX Hub는 두 지식 레이어 + 하나의 Agent UX로 구성한다.
+## 4. Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
-│  Hermes (직원 접점 UX / Agent / Tools·MCP)   │
+│  Hermes (UX / Agent / Tools·MCP)            │
 └─────────────────┬───────────────────────────┘
                   │
       ┌───────────┴───────────┐
       ▼                       ▼
 ┌───────────────┐     ┌──────────────────────┐
 │ Employee KB   │     │ Creative Memory      │
-│ (문서 RAG)    │     │ (정형 + 멀티모달)    │
 │               │     │                      │
-│ Obsidian md   │     │ Asset/Campaign/      │
-│      ↓        │     │ Review/Performance/  │
-│ LlamaIndex    │     │ Learning             │
+│ Obsidian md   │     │ Asset / Campaign /   │
+│      ↓        │     │ Review / Performance │
+│ LlamaIndex    │     │ / Learning           │
 │      ↓        │     │      ↓               │
 │ Postgres      │     │ Postgres (SQL join)  │
-│ + pgvector    │     │ (+ 선택적 임베딩)    │
+│ + pgvector    │     │                      │
 └───────────────┘     └──────────────────────┘
 ```
 
-### 4.1 Role Separation
+### Role split
 
-| Layer | Role |
-|-------|------|
+| Component | Role |
+|-----------|------|
 | **Obsidian** | 사람이 쓰는 원본 문서 저장소 (md vault) |
-| **LlamaIndex** | 문서 청킹·임베딩·인덱싱·검색 |
-| **Postgres + pgvector** | 벡터 저장 + 정형 메타/업무 데이터 |
-| **Hermes** | 질의 UX, 툴 호출, 메모리/스킬 (DeepTutor UX 대체) |
+| **LlamaIndex** | 청킹·임베딩·인덱싱·검색 |
+| **Postgres + pgvector** | 벡터 + 정형 메타/업무 데이터 |
+| **Hermes** | 직원 질의 UX, 툴 호출 |
 
-Obsidian vs LlamaIndex는 경쟁이 아니라 보완이다.  
-저장소 = Obsidian, 인덱싱/벡터 = LlamaIndex + pgvector.
-
-### 4.2 Why This Stack
-
-- DeepTutor: RAG 엔진 아이디어만 참고. 본체·교육 UX 비채택
-- LangChain 구형 Chain: 비채택. (Agent는 Hermes가 담당)
-- LlamaIndex: 2026 기준 문서 RAG에 현역. 전사 KB에 적합
-- 벡터DB: 초기 **pgvector** (회사 실무 기본값에 가깝고, 소재 메타 join에 유리). 규모·필터 한계 시 Qdrant 검토
-- Qdrant/Pinecone/Weaviate/Milvus는 대안이지 필수 아님
+Obsidian과 LlamaIndex는 경쟁이 아니라 보완이다.  
+**저장 = Obsidian, 인덱싱/벡터 = LlamaIndex + pgvector, UX = Hermes.**
 
 ---
 
-## 5. Data Model — Creative Memory
+## 5. Stack Decisions
 
-연결 키: `소재번호`(asset_id), `캠페인번호`(campaign_id).  
-케이스 CSV와 호환되는 최소 스키마.
-
-### 5.1 Entities
-
-#### Asset (소재)
-
-- asset_id, file_name, file_type (`image`|`video`), storage_path
-- registered_at, preview_path
-- legacy_tags (원본 비정제, 참고용)
-- ops_memo
-- controlled tags: format, angle, hook, audience (아래 사전)
-
-#### Campaign (캠페인)
-
-- campaign_id, name, brand, category, target_audience
-- objective, conversion_type (`landing_page_view`|`purchase`|…)
-- platform, start_date, end_date
-
-#### Review (심사 이력)
-
-- review_id, asset_id, campaign_id, platform
-- status (`approved`|`rejected`|`revision_required`)
-- reject_reason, remediation, reviewed_at
-- **현재 상태 컬럼은 별도 없음** → 동일 키의 최신 이벤트로 해석
-
-#### Performance (성과)
-
-- perf_id, asset_id, campaign_id
-- impressions, clicks, ctr, conversions, spend
-- period_start, period_end
-- data_status (`확정`|`잠정`)
-- 행 없음 ≠ 미집행/0 (표본·누락 가능)
-
-#### Learning (러닝)
-
-- asset_id 또는 campaign_id (optional FK)
-- hypothesis, result, next_test, notes
-- created_at
-- RAG 문서화 시 Obsidian `learnings/`에도 mirror 가능
-
-### 5.2 Controlled Tag Taxonomy
-
-자유 태그 금지. 소수 통제 값만 사용.
-
-| Field | Example values |
-|-------|----------------|
-| format | `image`, `video_9x16`, `video_1x1`, `carousel` |
-| angle | `product_cut`, `usage_scene`, `before_after`, `ugc`, `lookbook`, `promo` |
-| hook | `morning_routine`, `social_proof`, `offer`, `urgency`, `feature` |
-| audience | `20s_female`, `office_30s`, `1person_household`, … |
-| reuse_status | 매체별 최신 심사에서 유도: `approved` / `rejected` / `conditional` |
-| perf_tier | `champion` / `average` / `weak` / `unknown` (동일 전환기준·확정만 비교) |
-
-태그 사전 문서를 Obsidian에 두고 신규 값은 사전 합의 후에만 추가.
-
-### 5.3 Fact / Inference / Hypothesis
-
-| Layer | Example | Storage |
-|-------|---------|---------|
-| Fact | CTR 3.8%, Meta approved | DB numeric/status |
-| Inference | “아침 루틴이 먹힌다” | Learning + `inferred` 표시 |
-| Hypothesis | “다른 상품에도 전이” | Learning only; 랭킹에 과신 금지 |
+| Topic | Decision | Why |
+|-------|----------|-----|
+| UX | Hermes | Agent·툴·MCP에 가깝고, 교육용 UX(DeepTutor)보다 사내용에 맞음 |
+| 문서 원본 | Obsidian | 단순 저장소·사람 편집 |
+| RAG | LlamaIndex | 문서 RAG에 현역. DeepTutor가 감싸던 엔진 층만 차용하는 방향과 일치 |
+| Vector DB | **pgvector (Postgres)** | 회사 실무에서 흔한 기본값. 소재·메타 join, 운영 단순. 초기 규모(수천만 벡터 이하)에 충분 |
+| Indexing | 파일 해시/mtime 기반 **증분 upsert** | 변화 범위가 크지 않음 |
+| Agent orchestration | Hermes (LangChain classic 비사용) | RAG는 LlamaIndex, Agent는 Hermes로 역할 분리 |
+| Qdrant 등 | later 후보 | 필터·규모 한계가 보일 때 검토 |
 
 ---
 
-## 6. Data Model — Employee KB
+## 6. Employee KB
 
-### 6.1 Source
+### Source
 
-- Obsidian vault (사내 매뉴얼, 검수 기준, 프롬프트, 온보딩, 트러블슈팅)
-- 권한 티어(후속): 전체공개 / 팀 / 리더 — 초기 MVP는 공개·반공개만
+- Obsidian vault: 매뉴얼, 검수 기준, 운영 가이드, 프롬프트, 온보딩, 트러블슈팅, 러닝 노트
 
-### 6.2 Indexing
+### Pipeline
 
-- LlamaIndex가 vault 경로를 **직접** 읽음 (불필요한 복사본 지양)
-- 변화 범위가 크지 않으므로 **증분 upsert**
-  - 파일 해시 또는 mtime으로 변경 감지
-  - 신규·수정 → 재임베딩 후 upsert
-  - 삭제 → 벡터/메타 delete
-  - 전체 rebuild: 임베딩 모델·청크 스키마 변경 시에만
+1. LlamaIndex가 vault 경로를 **직접** 읽음 (불필요 복사본 지양)
+2. 변경 감지(해시 또는 mtime)
+3. 신규·수정 → 재임베딩 후 **upsert**
+4. 삭제 → 벡터/메타 delete
+5. 전체 rebuild는 임베딩 모델·청크 스키마 변경 시에만
 
-### 6.3 Storage
+### Vector store
 
 - Postgres + pgvector
-- 메타데이터 예: `path`, `title`, `updated_at`, `doc_type`, `access_tier`
+- 메타 예: `path`, `title`, `updated_at`, `doc_type`, (후속) `access_tier`
+
+### Access (later)
+
+- 전체공개 / 팀 / 리더 ACL은 후속. 초기는 공개·반공개 문서 위주.
 
 ---
 
-## 7. Agent Tools (Hermes)
+## 7. Creative Memory (광고 KB 코어)
 
-최소 툴셋:
+광고 관련 KB의 중심은 회사 소개가 아니라  
+**소재 × 캠페인 맥락 × 심사(재사용 가능) × 성과 × 러닝** 연결이다.
+
+### Entities
+
+| Entity | 담을 것 |
+|--------|---------|
+| **Asset** | 소재 ID, 유형, 경로, 미리보기, 통제 태그, 메모 |
+| **Campaign** | 브랜드, 카테고리, 타깃, 목표, **전환기준**, 매체, 기간 |
+| **Review** | 소재×캠페인×매체, 승인/반려/수정요청, 사유, 조치, 일자 (현재 상태는 최신 이벤트로 해석) |
+| **Performance** | 기간 성과, spend/CTR/전환 등, **확정/잠정** |
+| **Learning** | 가설 → 결과 → 다음 테스트 (짧은 텍스트; Obsidian mirror 가능) |
+
+연결 키: `asset_id`, `campaign_id`.
+
+### Controlled tags (자유 태그 지양)
+
+- `format`: image / video_9x16 / …
+- `angle`: product_cut / usage_scene / before_after / ugc / lookbook / promo
+- `hook`: morning_routine / social_proof / offer / …
+- `audience`: 합의된 소수 값
+- `reuse_status`: 매체별 최신 심사에서 유도
+- `perf_tier`: 동일 전환기준·확정 데이터만으로 부여
+
+### Fact / Inference / Hypothesis
+
+| Layer | Example | Rule |
+|-------|---------|------|
+| Fact | CTR, approved | DB에 숫자·상태로 |
+| Inference | “아침 루틴이 먹힌다” | Learning + 추론 표시 |
+| Hypothesis | “다른 상품에도 전이” | Learning만, 랭킹 과신 금지 |
+
+### KPI 해석 규칙
+
+- 전환기준이 다르면 CPA 등을 **섞어 랭킹하지 않음**
+- `잠정` 성과는 의사결정·보고에 넣을 때 명시하거나 제외
+- “성과 좋음” / “다시 쓸 만함” 정의는 태그 사전과 함께 Obsidian에 문서로 고정 (현업 합의로 갱신)
+
+초기 예시 정의:
+
+- **성과 좋음**: 확정 + 동일 전환기준·카테고리 내 합의 KPI(예: CPA 상위 구간)
+- **다시 쓸 만함**: 성과 조건 + 대상 매체 최신 심사 approved (+ 잠정 제외)
+
+---
+
+## 8. Hermes Tools (최소)
 
 | Tool | Purpose |
 |------|---------|
-| `kb_search` | Employee KB 의미 검색 (LlamaIndex + pgvector) |
-| `search_assets` | 소재 필터/자연어 → 후보 리스트 |
-| `get_asset_card` | 미리보기 + 캠페인 + 최신심사 + 성과 카드 |
-| `rank_by_kpi` | 전환기준·확정만으로 CPA/CTR 등 랭킹 |
-| `check_reuse_risk` | 매체별 최신 반려/승인 요약 |
+| `kb_search` | Employee KB 의미 검색 |
+| `search_assets` | 소재 후보 검색 |
+| `get_asset_card` | 미리보기 + 캠페인 + 최신심사 + 성과 |
+| `rank_by_kpi` | 전환기준·확정만 반영한 랭킹 |
+| `check_reuse_risk` | 매체별 반려/승인 요약 |
 
-성공 응답에는 가능하면 **근거**(문서 path, review_id, perf_id)를 붙인다.
+응답에는 가능하면 근거(문서 path, review/perf id)를 붙인다.
 
----
-
-## 8. Product Surfaces (MVP)
-
-### 8.1 Must
-
-1. 케이스 12소재 정규화 적재 (또는 동등 샘플)
-2. 소재 카드 조회 (미리보기 + 맥락 + 심사 + 성과)
-3. 실무자 요청 4종에 답하는 검색/추천
-4. Obsidian 샘플 문서 + 증분 인덱싱 + Hermes `kb_search`
-5. “성과 좋음” / “다시 쓸 만함” 정의 문서
-
-### 8.2 Suggested Definitions (초기)
-
-- **성과 좋음 (purchase)**: `data_status=확정` AND 동일 카테고리·전환기준 내 CPA 상위 20% (또는 팀 합의 임계값)
-- **다시 쓸 만함**: 성과 조건 + 대상 매체 최신 심사 `approved` (또는 revision 후 approved) + 잠정 성과 제외
-- LPV와 purchase CPA는 **절대 섞어 랭킹하지 않음**
-
-### 8.3 Later
-
-- 이미지 임베딩(유사 소재)
-- 검수 보조(반려 위험 표시)
-- 매체 API 연동
-- ACL·부서별 vault
-- Knowledge Graph
+Hermes는 범용 Agent UX이므로, 소재 카드형 업무 화면은 툴 결과 또는 얇은 UI로 보완한다.
 
 ---
 
-## 9. Success Metrics
+## 9. Implementation Order
 
-케이스 `work_context` 기준을 프로토타입 검증에 재사용:
+1. Postgres 스키마 (Creative Memory 엔티티 + pgvector 문서 테이블)
+2. Obsidian 태그/정의 사전
+3. Creative Memory 샘플 적재 + 소재 카드 조회
+4. 필터 검색 → 자연어/툴 연결
+5. Obsidian + LlamaIndex 증분 upsert
+6. Hermes 툴 연결
+7. (later) 이미지 임베딩, ACL, 매체 API, Qdrant 이전 검토
 
-| Metric | Baseline (case) | Target (MVP 가정) |
-|--------|-----------------|-------------------|
-| 첫 후보 전달 중앙값 | 17분 | ≤ 8분 (또는 대화형 즉시 후보) |
-| 조건 재확인율 | 11/38 | 절반 이하 |
-| 재전달 | 6건 | 감소 |
-| 요청 4종 커버 | — | 각각 근거 포함 응답 가능 |
-
-정량 측정이 어려우면: 과제 요청 4종에 대한 **골든 답안 체크리스트**로 대체.
-
----
-
-## 10. Implementation Order
-
-1. Postgres 스키마 (5 entities + pgvector 문서 테이블)
-2. 태그 사전 1페이지 (Obsidian)
-3. 케이스 데이터 정규화 적재
-4. 소재 카드 API/조회
-5. 필터 검색 → 그다음 자연어/RAG
-6. Obsidian vault + LlamaIndex 증분 upsert
-7. Hermes 툴 연결
-8. (선택) 이미지 임베딩
-
-**정형 join 조회가 RAG보다 먼저**다. 검색이 깨진 채 RAG만 올리지 않는다.
+**정형 join 조회를 RAG보다 먼저** 만든다.
 
 ---
 
-## 11. Risks & Open Questions
+## 10. Decisions Log
 
-| Risk / Question | Handling |
-|-----------------|----------|
-| 성과 표본 커버리지 불명 | “행 없음 ≠ 0” 명시, unknown tier |
-| “성과 좋음” 조직 표준 부재 | 초기 정의 문서화 후 현업 합의 |
-| 영상은 대표 프레임만 | MVP는 썸네일+메타; 원본 분석은 later |
-| 사내 문서 권한 | MVP는 공개·반공개; ACL later |
-| Hermes는 업무 화면이 아님 | 소재 카드는 툴 결과/얇은 UI로 보완 |
-| DeepTutor/유행 프레임워크 과신 | 엔진만 차용, UX·본체는 직접 조합 |
-
----
-
-## 12. Decisions Log
-
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Hub 첫 도메인 | Creative Memory + Employee KB | 채용 멘트·과제와 일치 |
-| UX | Hermes | DeepTutor 교육 UX 비적합; Agent·MCP에 가깝음 |
-| 문서 저장 | Obsidian | 사람 편집·원본 vault |
-| RAG | LlamaIndex | 문서 RAG 현역; DeepTutor가 감싸던 엔진 층 |
-| Vector DB | Postgres + pgvector | join·운영 단순; 초기 규모 충분 |
-| Indexing | 증분 upsert | 변화량 작음 |
-| LangChain classic | 비사용 | Agent는 Hermes; RAG는 LlamaIndex |
-| DeepTutor full | 비사용 | 패턴만 참고 |
+| Decision | Choice |
+|----------|--------|
+| Hub 구성 | Employee KB + Creative Memory |
+| UX | Hermes |
+| 문서 저장 | Obsidian |
+| RAG | LlamaIndex |
+| Vector DB | Postgres + pgvector |
+| Indexing | 증분 upsert |
+| DeepTutor | 엔진 패턴만 참고, UX/본체 비사용 |
+| LangChain classic | 비사용 |
 
 ---
 
-## 13. References
+## 11. Next
 
-- (주)원정대 AX 채용 공고 문구 (AX Hub, KB/RAG/Agent, 반려+성과 예시)
-- 사전 과제: `ax_pre_interview_case_exercise` (README, work_context, assets/campaigns/review/performance, thumbnails)
-- 업계 참고: creative library = performance-tagged knowledge system; fact/inference 분리
-- 스택 참고: LlamaIndex / pgvector / Hermes Agent (Nous Research); DeepTutor는 멀티엔진 RAG 패턴만
-
----
-
-## 14. Next Step
-
-이 스펙 승인 후 implementation plan 작성:
+스펙 확정 후 implementation plan:
 
 - DB 마이그레이션·시드
 - LlamaIndex upsert 파이프라인
 - Hermes tool 스키마
-- MVP 검증용 요청 4종 시나리오
+- MVP 검증 시나리오
